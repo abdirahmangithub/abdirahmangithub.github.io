@@ -1,0 +1,65 @@
+---
+title: NLP
+categories: [NATURAL LANGUAUGE PROCESSING]
+
+tags : NLP
+
+
+---
+## Import required libraries
+from transformers import BertTokenizer, TFBertModel
+import tensorflow as tf
+import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
+
+
+# Load pre-trained BERT tokenizer and BERT model from Hugging Face
+tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+bert_model = TFBertModel.from_pretrained('bert-base-uncased')
+
+
+# Example sentence pairs (some similar, some not)
+sentence_pairs = [
+    ("How do I learn Python?", "What is the best way to study Python?"),
+    ("What is AI?", "How to cook pasta?"),
+    ("How do I bake a chocolate cake?", "Give me a chocolate cake recipe."),
+    ("How can I improve my coding skills?", "Tips for becoming better at programming."),
+    ("Where can I buy cheap laptops?", "Best sites to find affordable computers."),]
+
+# Ground truth similarity labels: 1 = similar, 0 = not similar
+labels = [1, 0, 1, 1, 1]
+
+# Function to get the BERT [CLS] embedding for a sentence
+def get_sentence_embedding(sentence):
+    # Tokenize and encode sentence into input tensors
+    inputs = tokenizer(sentence, return_tensors='tf', padding=True, truncation=True)
+    # Get model output
+    outputs = bert_model(inputs)
+    # Extract [CLS] token embedding (shape: [1, 768])
+    cls_embedding = outputs.last_hidden_state[:, 0, :]
+    return cls_embedding.numpy()
+
+# Calculate cosine similarity for each pair
+predictions = []
+for sent1, sent2 in sentence_pairs:
+    emb1 = get_sentence_embedding(sent1)
+    emb2 = get_sentence_embedding(sent2)
+    sim_score = cosine_similarity(emb1, emb2)[0][0]
+    pred = 1 if sim_score > 0.7 else 0
+    predictions.append(pred)
+
+    print(f"\nSentence 1: {sent1}")
+    print(f"Sentence 2: {sent2}")
+    print(f"Cosine Similarity: {sim_score:.4f} → Predicted Similar: {pred}")
+
+
+# Evaluate accuracy
+correct = 0
+for i in range(len(predictions)):
+    if predictions[i] == labels[i]:
+        correct += 1
+
+# Final accuracy calculation
+total = len(labels)
+accuracy = correct / total
+print(f"\nAccuracy: {accuracy:.2%}")
